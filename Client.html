@@ -1,0 +1,434 @@
+<script>
+// ======================================
+// THREATSCAPE - LIVE GRAPH DASHBOARD
+// ======================================
+
+let nodes = [];
+let edges = [];
+let graph = {};
+
+// ======================================
+// BUILD DIRECTED GRAPH
+// ======================================
+
+function buildGraph() {
+    graph = {};
+
+    nodes.forEach(node => {
+        graph[node.id] = [];
+    });
+
+    edges.forEach(([source, destination]) => {
+        if (graph[source]) {
+            graph[source].push(destination);
+        }
+    });
+}
+
+// ======================================
+// BLAST RADIUS - BFS
+// ======================================
+
+function getBlastRadius(start) {
+    const visited = new Set([start]);
+    const queue = [start];
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+
+        for (const neighbor of graph[current] || []) {
+            if (!visited.has(neighbor)) {
+                visited.add(neighbor);
+                queue.push(neighbor);
+            }
+        }
+    }
+
+    visited.delete(start);
+    return [...visited];
+}
+
+// ======================================
+// SHORTEST DIRECTED PATH - BFS
+// ======================================
+
+function findAttackPath(start, destination) {
+    const queue = [[start]];
+    const visited = new Set([start]);
+
+    while (queue.length > 0) {
+        const path = queue.shift();
+        const current = path[path.length - 1];
+
+        if (current === destination) return path;
+
+        for (const neighbor of graph[current] || []) {
+            if (!visited.has(neighbor)) {
+                visited.add(neighbor);
+                queue.push([...path, neighbor]);
+            }
+        }
+    }
+
+    return null;
+}
+
+// ======================================
+// SIMPLIFIED CENTRALITY RANKING
+// ======================================
+
+function calculateCentrality() {
+    const centrality = {};
+
+    nodes.forEach(node => {
+        centrality[node.id] = 0;
+    });
+
+    const ids = Object.keys(graph);
+
+    for (const source of ids) {
+        for (const destination of ids) {
+            if (source === destination) continue;
+
+            const path = findAttackPath(source, destination);
+
+            if (path) {
+                for (let i = 1; i < path.length - 1; i++) {
+                    centrality[path[i]]++;
+                }
+            }
+        }
+    }
+
+    return Object.entries(centrality)
+        .sort((a, b) => b[1] - a[1]);
+}
+
+// ======================================
+// SAFE HTML TEXT
+// ======================================
+
+function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+// ======================================
+// NETWORK GRAPH VISUALIZATION
+// ======================================
+
+function drawGraph(selected = "", highlightedPath = []) {
+    const width = 850;
+    const height = 330;
+
+    const positions = {
+        "Rahul": [80, 80],
+        "Priya": [80, 250],
+        "Laptop-01": [250, 80],
+        "Laptop-02": [250, 250],
+        "Server-01": [440, 80],
+        "Server-02": [610, 210],
+        "HR-DB": [610, 50],
+        "Finance-DB": [780, 210]
+    };
+
+    const colors = {
+        User: "#a78bfa",
+        Device: "#38bdf8",
+        Server: "#34d399",
+        Database: "#fbbf24"
+    };
+
+    const pathEdges = new Set();
+
+    for (let i = 0; i < highlightedPath.length - 1; i++) {
+        pathEdges.add(
+            highlightedPath[i] + "->" + highlightedPath[i + 1]
+        );
+    }
+
+    const pathNodes = new Set(highlightedPath);
+
+    let svg = `
+        <svg viewBox="0 0 ${width} ${height}"
+             xmlns="http://www.w3.org/2000/svg">
+
+            <defs>
+                <marker id="arrow"
+                    markerWidth="8" markerHeight="8"
+                    refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L6,3 Z"
+                        fill="#64748b"/>
+                </marker>
+
+                <marker id="redArrow"
+                    markerWidth="8" markerHeight="8"
+                    refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L6,3 Z"
+                        fill="#ef4444"/>
+                </marker>
+            </defs>
+    `;
+
+    edges.forEach(([source, destination]) => {
+        const p1 = positions[source];
+        const p2 = positions[destination];
+
+        if (!p1 || !p2) return;
+
+        const isAttackEdge = pathEdges.has(
+            source + "->" + destination
+        );
+
+        svg += `
+            <line
+                x1="${p1[0]}" y1="${p1[1]}"
+                x2="${p2[0]}" y2="${p2[1]}"
+                stroke="${isAttackEdge ? "#ef4444" : "#64748b"}"
+                stroke-width="${isAttackEdge ? 4 : 2}"
+                marker-end="${isAttackEdge ? "url(#redArrow)" : "url(#arrow)"}"
+            />
+        `;
+    });
+
+    nodes.forEach(node => {
+        const position = positions[node.id];
+        if (!position) return;
+
+        const [x, y] = position;
+
+        let color = colors[node.type] || "#94a3b8";
+
+        if (
+            node.id === selected ||
+            pathNodes.has(node.id) ||
+            node.status === "Compromised"
+        ) {
+            color = "#ef4444";
+        }
+
+        const radius = pathNodes.has(node.id) ? 21 : 17;
+
+        svg += `
+            <g>
+                <circle
+                    cx="${x}" cy="${y}"
+                    r="${radius}"
+                    fill="${color}"
+                    stroke="#ffffff"
+                    stroke-width="2"
+                />
+                <text
+                    x="${x}" y="${y + 36}"
+                    text-anchor="middle"
+                    fill="#e2e8f0"
+                    font-size="12">
+                    ${escapeHTML(node.id)}
+                </text>
+            </g>
+        `;
+    });
+
+    svg += "</svg>";
+
+    document.getElementById("networkGraph").innerHTML = svg;
+}
+
+// ======================================
+// DISPLAY CRITICAL NODES
+// ======================================
+
+function showCriticalNodes() {
+    const ranking = calculateCentrality();
+
+    const container = document.getElementById("criticalResults");
+
+    container.innerHTML = ranking.map(([name, score]) => `
+        <div class="critical-row">
+            <span>${escapeHTML(name)}</span>
+            <strong>${score}</strong>
+        </div>
+    `).join("");
+}
+
+// ======================================
+// MAIN THREAT ANALYSIS
+// ======================================
+
+function analyzeThreat() {
+    const selected =
+        document.getElementById("deviceSelect").value;
+
+    if (!selected || !graph[selected]) return;
+
+    const blastRadius = getBlastRadius(selected);
+
+    const attackPath =
+        findAttackPath(selected, "Finance-DB");
+
+    document.getElementById("reachableAssets").textContent =
+        blastRadius.length;
+
+    document.getElementById("pathStatus").textContent =
+        attackPath ? "Found" : "None";
+
+    const blastContainer =
+        document.getElementById("blastResults");
+
+    blastContainer.innerHTML = `
+        <h3>Reachable Assets: ${blastRadius.length}</h3>
+        ${
+            blastRadius.length
+                ? blastRadius.map(asset => `
+                    <div class="result-item">
+                        ● ${escapeHTML(asset)}
+                    </div>
+                `).join("")
+                : "<p>No reachable assets found.</p>"
+        }
+    `;
+
+    const attackContainer =
+        document.getElementById("attackResults");
+
+    attackContainer.innerHTML = attackPath
+        ? `
+            <h3>Potential route to Finance-DB</h3>
+            <p class="path">
+                ${attackPath.map(escapeHTML).join(" → ")}
+            </p>
+            <p>Number of connections: ${attackPath.length - 1}</p>
+            <p>Note: This is a possible graph route, not confirmation of an actual attack.</p>
+        `
+        : "<p>No directed path to Finance-DB found.</p>";
+
+    drawGraph(selected, attackPath || []);
+}
+
+// ======================================
+// LOAD LIVE GRAPH FROM NEO4J
+// ======================================
+
+function loadGraphFromNeo4j() {
+    const graphContainer =
+        document.getElementById("networkGraph");
+
+    graphContainer.innerHTML =
+        "<p>Loading graph data from Neo4j...</p>";
+
+    google.script.run
+        .withSuccessHandler(function(data) {
+            console.log("Neo4j response:", data);
+
+            if (
+                !data ||
+                !Array.isArray(data.nodes) ||
+                !Array.isArray(data.edges)
+            ) {
+                graphContainer.innerHTML =
+                    "<p>Invalid graph data received.</p>";
+                return;
+            }
+
+            nodes = data.nodes;
+            edges = data.edges;
+
+            buildGraph();
+
+            const deviceSelect =
+                document.getElementById("deviceSelect");
+
+            deviceSelect.innerHTML = "";
+
+            nodes
+                .filter(node => node.type === "Device")
+                .forEach(node => {
+                    const option = document.createElement("option");
+                    option.value = node.id;
+                    option.textContent = node.id;
+                    deviceSelect.appendChild(option);
+                });
+
+            document.getElementById("totalAssets").textContent =
+                nodes.length;
+
+            document.getElementById("totalConnections").textContent =
+                edges.length;
+
+            drawGraph();
+            showCriticalNodes();
+
+            if (deviceSelect.options.length > 0) {
+                analyzeThreat();
+            } else {
+                document.getElementById("blastResults").textContent =
+                    "No devices found.";
+
+                document.getElementById("attackResults").textContent =
+                    "No devices available for analysis.";
+
+                document.getElementById("reachableAssets").textContent = "0";
+                document.getElementById("pathStatus").textContent = "None";
+            }
+
+            console.log("THREATSCAPE: Graph loaded successfully!");
+        })
+        .withFailureHandler(function(error) {
+            console.error("Neo4j loading error:", error);
+
+            graphContainer.innerHTML =
+                "<p style='color:#ef4444;'>ERROR: " +
+                escapeHTML(error.message || error) +
+                "</p>";
+
+            document.getElementById("totalAssets").textContent = "ERROR";
+            document.getElementById("totalConnections").textContent = "ERROR";
+        })
+        .getDashboardGraph();
+}
+
+// ======================================
+// SIMULATED DEVICE COMPROMISE
+// ======================================
+
+function simulateCompromise() {
+    const selected =
+        document.getElementById("deviceSelect").value;
+
+    if (!selected) {
+        alert("Please select a device first.");
+        return;
+    }
+
+    analyzeThreat();
+
+    document.getElementById("blastResults").innerHTML += `
+        <div class="result-item"
+             style="border-left:4px solid #ef4444;">
+            🚨 SIMULATED SECURITY INCIDENT
+            <br>
+            ${escapeHTML(selected)} has been marked as compromised
+            in this demonstration.
+        </div>
+    `;
+
+    alert(
+        "SIMULATED INCIDENT!\n\n" +
+        selected +
+        " has been marked as compromised in this demonstration."
+    );
+}
+
+// ======================================
+// INITIALIZE DASHBOARD
+// ======================================
+
+window.addEventListener("load", function() {
+    loadGraphFromNeo4j();
+});
+</script>

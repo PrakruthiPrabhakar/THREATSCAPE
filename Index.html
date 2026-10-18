@@ -1,0 +1,146 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THREATSCAPE | Cyber Threat Intelligence</title>
+   <style>
+  <?!= include('Styles'); ?>
+</style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <h2>🛡 THREATSCAPE</h2>
+        <p class="tagline">GRAPHOPS SECURITY</p>
+
+        <nav>
+            <a class="active" href="#overview">◈ Security Overview</a>
+            <a href="#network">◎ Network Graph</a>
+            <a href="#blast">◉ Blast Radius</a>
+            <a href="#attack">⌁ Attack Path</a>
+            <a href="#critical">◆ Critical Nodes</a>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <span class="status-dot"></span>
+            SYSTEM ONLINE
+        </div>
+    </aside>
+
+    <main>
+        <header>
+            <div>
+                <h1>Security Operations Center</h1>
+                <p>Intelligent Cyber Threat Detection & Attack Path Analysis</p>
+            </div>
+            <div class="profile">SOC ANALYST</div>
+        </header>
+
+        <section id="overview">
+            <div class="section-heading">
+                <h2>Security Overview</h2>
+                <span class="demo-label">SIMULATED ENVIRONMENT</span>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <p>Total Assets</p>
+                    <h2 id="totalAssets">0</h2>
+                    <span>Company network</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>Network Connections</p>
+                    <h2 id="totalConnections">0</h2>
+                    <span>Graph relationships</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>Reachable Assets</p>
+                    <h2 id="reachableAssets">0</h2>
+                    <span>Selected endpoint</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>Potential Attack Path</p>
+                    <h2 id="pathStatus">--</h2>
+                    <span>Finance database</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="network">
+            <h2>Network Graph</h2>
+            <p class="description">
+                Visual representation of users, devices, servers and databases.
+            </p>
+
+            <div class="graph-container">
+                <div id="networkGraph">Loading graph from Neo4j...</div>
+            </div>
+
+            <div class="legend">
+                <span><i class="user-color"></i> Users</span>
+                <span><i class="device-color"></i> Devices</span>
+                <span><i class="server-color"></i> Servers</span>
+                <span><i class="database-color"></i> Databases</span>
+                <span><i class="selected-color"></i> Selected device</span>
+            </div>
+        </section>
+
+        <section id="blast">
+            <h2>Blast Radius Analysis</h2>
+            <p class="description">
+                Investigate which assets may be reachable from a selected device.
+            </p>
+
+            <div class="analysis-panel">
+                <label for="deviceSelect">Select potentially compromised device</label>
+
+                <select id="deviceSelect"></select>
+
+                <button onclick="analyzeThreat()">Analyze Threat</button>
+
+                <button class="danger-btn" onclick="simulateCompromise()">
+                    🚨 Simulate Compromise
+                </button>
+
+                <div id="blastResults" class="results">
+                    Select a device and click Analyze Threat.
+                </div>
+            </div>
+        </section>
+
+        <section id="attack">
+            <h2>Potential Attack Path Analysis</h2>
+            <p class="description">
+                Identify a possible route to the critical Finance database.
+            </p>
+
+            <div id="attackResults" class="analysis-panel">
+                No analysis performed yet.
+            </div>
+        </section>
+
+        <section id="critical">
+            <h2>Critical Node Detection</h2>
+            <p class="description">
+                Assets ranked by their graph centrality score.
+            </p>
+
+            <div id="criticalResults" class="analysis-panel">
+                Calculating network importance...
+            </div>
+        </section>
+
+        <footer>
+            THREATSCAPE © 2026 | GRAPHOPS SECURITY ANALYTICS
+        </footer>
+    </main>
+<?!= include('Client'); ?>
+
+</body>
+</html>
